@@ -393,8 +393,12 @@ namespace CppSharp.Generators.CSharp
                     var @interface = @class.Namespace.Classes.FirstOrDefault(
                         c => c.IsInterface && c.OriginalClass == @class);
                     var printedClass = (@interface ?? @class).Visit(TypePrinter);
+                    var dict = $@"global::System.Collections.Generic.Dictionary<IntPtr, {
+                        printedClass}>";
+                    /* @bxl patched for Unity
                     var dict = $@"global::System.Collections.Concurrent.ConcurrentDictionary<IntPtr, {
                         printedClass}>";
+                     */
                     WriteLine("internal static readonly {0} NativeToManagedMap = new {0}();", dict);
                     WriteLine("protected void*[] __OriginalVTables;");
                 }
@@ -1942,8 +1946,13 @@ namespace CppSharp.Generators.CSharp
                 var printedClass = (@interface ?? (
                     @base.IsAbstractImpl ? @base.BaseClass : @base)).Visit(TypePrinter);
                 WriteLine($"{printedClass} {Helpers.DummyIdentifier};");
+
+                WriteLine("NativeToManagedMap.Remove({0});",
+                    Helpers.InstanceIdentifier);
+                /* @bxl patched for Unity
                 WriteLine("NativeToManagedMap.TryRemove({0}, out {1});",
                     Helpers.InstanceIdentifier, Helpers.DummyIdentifier);
+                */
                 var classInternal = TypePrinter.PrintNative(@class);
                 if (@class.IsDynamic && GetUniqueVTableMethodEntries(@class).Count != 0)
                 {
@@ -3165,7 +3174,10 @@ namespace CppSharp.Generators.CSharp
                 libName = "__Internal";
             else if (TargetTriple.IsWindows(targetTriple) &&
                 libName.Contains('.') && Path.GetExtension(libName) != ".dll")
-                libName += ".dll";
+            {
+                // @bxl patched for Unity
+                // libName += ".dll";
+            }
 
             if (targetTriple.Contains("apple") || targetTriple.Contains("darwin") ||
                 targetTriple.Contains("osx"))
